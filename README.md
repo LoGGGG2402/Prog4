@@ -1,73 +1,92 @@
 # WordPress HTTP Client Programs
 
-A collection of Python-based HTTP client implementations using raw sockets to perform various WordPress operations.
+A lightweight collection of Python-based HTTP client implementations using raw sockets for WordPress operations.
 
 ## Overview
 
-This project provides several Python programs for interacting with WordPress through HTTP:
+This project provides optimized Python programs for interacting with WordPress via HTTP:
 
-- HTTP GET requests
-- HTTP POST requests for authentication
-- File upload to WordPress
-- File download from WordPress
+- **httpget.py**: Simple GET requests to retrieve web content
+- **httppost.py**: General-purpose POST requests (including WordPress authentication)
+- **httpupload.py**: File upload to WordPress media library
+- **httpdownload.py**: File download from WordPress uploads directory
 
 ## Setting up the Test Environment
 
-1. Install Flask for the local test server:
+1. Install the local test server requirements:
 
    ```bash
-   pip install flask
+   pip install flask==2.0.1 werkzeug==2.0.1
    ```
 
 2. Launch the WordPress test server:
 
    ```bash
-   python local_wordpress_server.py
+   cd test_server
+   ./setup_environment.sh
+   ./start_server.sh
    ```
 
-3. The mock WordPress server will be available at http://localhost:8000
-
-   - Pre-configured credentials:
-     - Username: test
-     - Password: test123QWE@AD
-
-4. Create a test image file for upload testing:
-   ```bash
-   echo "Test image content" > test.png
-   ```
+3. The WordPress test server runs at http://localhost:8000
+   - Credentials: `test` / `test123QWE@AD`
 
 ## Using the Client Programs
 
 ### HTTP GET
 
-Retrieve content from a WordPress site:
+Fetch a web page and display its title:
 
 ```bash
-python httpget.py --url http://localhost:8000/
+python3 httpget.py --url http://localhost:8000/
 ```
 
-### HTTP POST (Authentication)
+### HTTP POST
 
-Authenticate with WordPress credentials:
+#### WordPress Login
 
 ```bash
-python httppost.py --url http://localhost:8000/ --user test --password test123QWE@AD
+python3 httppost.py --url http://localhost:8000/ --user test --password test123QWE@AD
+```
+
+#### General POST Requests
+
+Send form data:
+```bash
+python3 httppost.py --url http://localhost:8000/some-endpoint --form-param key1=value1 key2=value2
+```
+
+Send JSON data:
+```bash
+python3 httppost.py --url http://localhost:8000/api/endpoint --json '{"key":"value"}'
+```
+
+With custom headers:
+```bash
+python3 httppost.py --url http://localhost:8000/endpoint --header Authorization="Bearer token"
 ```
 
 ### File Upload
 
-Upload files to WordPress (images, documents, etc.):
+Upload media to WordPress:
 
 ```bash
-python httpupload.py --url http://localhost:8000/ --user test --password test123QWE@AD --local-file README.md
+python3 httpupload.py --url http://localhost:8000/ --user test --password test123QWE@AD --local-file image.jpg
 ```
 
 ### File Download
 
-Download previously uploaded files:
+Download a file from WordPress:
 
 ```bash
-python httpdownload.py --url http://localhost:8000/ --remote-file /wp-content/uploads/2025/3/README.md
+python3 httpdownload.py --url http://localhost:8000/ --remote-file /wp-content/uploads/2023/05/image.jpg
 ```
 
-**Note:** The remote file path may vary depending on WordPress's current year/month storage structure. Check the output from the upload command for the correct path.
+> **Note:** WordPress organizes uploads by year/month. The download script automatically handles both formats (e.g., `/2023/5/` and `/2023/05/`).
+
+## Code Features
+
+- Raw socket communication (no external HTTP libraries)
+- SSL/TLS support for HTTPS
+- Automatic handling of chunked transfer encoding
+- Efficient memory usage for large files
+- Path normalization for WordPress date-based directory structure

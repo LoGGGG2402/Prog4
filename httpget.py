@@ -1,63 +1,33 @@
 #!/usr/bin/env python3
 
-import socket
-import argparse
-import re
-import ssl
+import socket, ssl, re, argparse
 from urllib.parse import urlparse
 from contextlib import closing
 
 def http_get(url):
-    # Parse the URL
-    parsed_url = urlparse(url)
-    hostname = parsed_url.hostname
-    port = parsed_url.port or (443 if parsed_url.scheme == 'https' else 80)
-    path = parsed_url.path or '/'
+    parsed = urlparse(url)
+    host, path = parsed.hostname, parsed.path or '/'
+    port = parsed.port or (443 if parsed.scheme == 'https' else 80)
     
-    # Use contextlib.closing to ensure socket is properly closed
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as client_socket:
+    with closing(socket.socket()) as s:
         try:
-            # Wrap with SSL if https
-            if parsed_url.scheme == 'https':
-                context = ssl.create_default_context()
-                client_socket = context.wrap_socket(client_socket, server_hostname=hostname)
+            # Setup connection
+            if parsed.scheme == 'https':
+                s = ssl.create_default_context().wrap_socket(s, server_hostname=host)
+            s.connect((host, port))
             
-            # Connect to server
-            client_socket.connect((hostname, port))
-            
-            # Prepare and send HTTP request
-            request = (
-                f"GET {path} HTTP/1.1\r\n"
-                f"Host: {hostname}\r\n"
-                "User-Agent: Custom-HTTP-Client\r\n"
-                "Accept: text/html\r\n"
-                "Connection: close\r\n\r\n"
-            )
-            
-            client_socket.sendall(request.encode())
-            
-            # Receive response efficiently
-            chunks = []
-            while True:
-                data = client_socket.recv(8192)  # Increased buffer size
-                if not data:
-                    break
-                chunks.append(data)
-                
-            # Join all chunks at once
-            response = b''.join(chunks)
-            response_text = response.decode('utf-8', errors='replace')
+            # Send request and get response
+            s.sendall(f"GET {path} HTTP/1.1\r\nHost: {host}\r\n"
+                      f"User-Agent: Custom-HTTP-Client\r\nConnection: close\r\n\r\n".encode())
+            resp = b''.join(iter(lambda: s.recv(8192), b'')).decode('utf-8', errors='replace')
             
             # Extract title
-            title_match = re.search(r'<title>(.*?)</title>', response_text, re.DOTALL)
-            print(f"Title: {title_match.group(1).strip()}" if title_match else "No title found in the page")
-                
+            title = re.search(r'<title>(.*?)</title>', resp, re.DOTALL)
+            print(f"Title: {title.group(1).strip()}" if title else "No title found")
         except Exception as e:
             print(f"Error: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="HTTP GET client")
     parser.add_argument('--url', required=True, help='URL to fetch')
-    args = parser.parse_args()
-    
-    http_get(args.url)
+    http_get(parser.parse_args().url)
